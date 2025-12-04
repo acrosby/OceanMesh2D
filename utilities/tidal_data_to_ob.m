@@ -90,7 +90,15 @@ for j = 1:obj.f15.nbfr
             const_t = ncread(tidal_database,'con');
         end
     end
-    k = find(startsWith(string(const_t'),lower(const{j})));
+    try
+        % For matlab
+        k = find(startsWith(string(const_t'),lower(const{j})));
+    catch ME
+        % Try this for octave
+        warning("Unable to use string (possibly running in octave?).")
+        warning("Attempting without explictly using string function.")
+        k = find(startsWith(const_t',lower(const{j})));
+    end
     if isempty(k)
         disp(['No tidal data in file for constituent ' const{j}])
         obj.f15.opealpha(j).name = const{j};
@@ -123,9 +131,15 @@ for j = 1:obj.f15.nbfr
     % Make into complex number
     Z = Re_now - Im_now*1i;
     % Do the scattered Interpolation
-    F = scatteredInterpolant(xx,yy,Z,'natural');
-    BZ = F(b_x,b_y);  
-        %
+    try
+        % For matlab
+        F = scatteredInterpolant(xx,yy,Z,'natural', 'nearest');
+        BZ = F(b_x,b_y);
+    catch
+        % Try this for octave
+        warning('Error using scatteredInterpolant. Falling back to linear griddatan.')
+        BZ = griddatan([xx,yy],Z, [b_x, b_y], "linear");
+    end
     % Convert real and imaginary parts to amplitude and phase
     amp_b = abs(BZ);  
     phs_b = rad2deg(angle(BZ));
